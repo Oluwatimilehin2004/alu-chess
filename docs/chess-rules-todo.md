@@ -13,18 +13,20 @@
 | Game: Prüfung ob Figur dem aktiven Spieler gehört | ✅ |
 | Game: Spielerwechsel nach Zug | ✅ |
 | Game: Resignation | ✅ |
-| Figurspezifische Zugregeln | ❌ |
-| Schlagregeln | ❌ (eigene Figuren können geschlagen werden) |
-| Schach-Erkennung | ❌ |
-| Schachmatt / Patt | ❌ |
-| Spezialzüge | ❌ |
+| Figurspezifische Zugregeln | ✅ |
+| Schlangregeln (eigene Figuren geschützt) | ✅ |
+| Pfadblockierung (Sliding Pieces) | ✅ |
+| Schach-Erkennung | ✅ |
+| Legale Züge (Schach-Constraint) | ✅ |
+| Schachmatt / Patt | ✅ |
+| Spezialzüge (Rochade, En Passant, Promotion) | ❌ |
 | Remis-Bedingungen | ❌ |
 
 ---
 
 ## Implementierungsreihenfolge
 
-### Stufe 1: Eigene Figuren nicht schlagen ⬜
+### Stufe 1: Eigene Figuren nicht schlagen ✅
 **Aufwand:** Klein
 **Dateien:** `Board.scala` oder `Game.scala`
 
@@ -33,7 +35,7 @@
 
 ---
 
-### Stufe 2: Figurspezifische Zugmuster ⬜
+### Stufe 2: Figurspezifische Zugmuster ✅
 **Aufwand:** Mittel–Groß (Kernstück)
 **Dateien:** Neues Modul `MoveValidator.scala` (oder `MoveRules.scala`)
 
@@ -52,45 +54,47 @@ Jede Figur bekommt eine Funktion: `(Move, Board) → Boolean`
 
 ---
 
-### Stufe 3: Pfadblockierung (Sliding Pieces) ⬜
+### Stufe 3: Pfadblockierung (Sliding Pieces) ✅
 **Aufwand:** Klein–Mittel
 **Dateien:** `MoveValidator.scala`
 
-- Rook, Bishop und Queen dürfen nicht über andere Figuren hinwegziehen
-- Knight ist davon ausgenommen (springt)
-- Pfad zwischen `from` und `to` muss frei sein
+- ✅ Rook, Bishop und Queen dürfen nicht über andere Figuren hinwegziehen
+- ✅ Knight ist davon ausgenommen (springt)
+- ✅ Pfad zwischen `from` und `to` muss frei sein
+- In MoveValidator.isPathClear implementiert, gemeinsam mit Stufe 2
 
 ---
 
-### Stufe 4: Schach-Erkennung ⬜
+### Stufe 4: Schach-Erkennung ✅
 **Aufwand:** Mittel
-**Dateien:** Neues Modul `CheckDetector.scala` (oder in `Game.scala`)
+**Dateien:** `MoveValidator.scala`
 
-- `isInCheck(board, color): Boolean` — ist der König von `color` angegriffen?
+- ✅ `isInCheck(board, color): Boolean`
+- ✅ `findKing` und `isAttackedBy` als Hilfsfunktionen
 - Prüft alle gegnerischen Figuren: Kann eine davon den König erreichen?
 - Nutzt die Zugmuster aus Stufe 2 + Pfadlogik aus Stufe 3
 
 ---
 
-### Stufe 5: Legale Züge filtern (Schach-Constraint) ⬜
+### Stufe 5: Legale Züge filtern (Schach-Constraint) ✅
 **Aufwand:** Mittel
 **Dateien:** `Game.scala`, `MoveValidator.scala`
 
-- Ein Zug ist nur legal, wenn der eigene König danach **nicht** im Schach steht
-- `legalMoves(board, color): List[Move]` — alle legalen Züge eines Spielers
-- `applyMove` nutzt diesen Filter zusätzlich zu den Zugmustern
+- ✅ Ein Zug ist nur legal, wenn der eigene König danach **nicht** im Schach steht
+- ✅ `legalMoves(board, color): List[Move]` — alle legalen Züge eines Spielers
+- ✅ `applyMove` nutzt diesen Filter zusätzlich zu den Zugmustern
 - Deckt ab: Fesselung (gepinnte Figuren), König darf nicht ins Schach ziehen
 
 ---
 
-### Stufe 6: Schachmatt und Patt ⬜
+### Stufe 6: Schachmatt und Patt ✅
 **Aufwand:** Klein (baut auf Stufe 4+5 auf)
-**Dateien:** `Game.scala`, `GameStatus` Enum erweitern
+**Dateien:** `Game.scala`, `GameStatus` Enum erweitert
 
-- **Schachmatt:** König im Schach + keine legalen Züge → Gewinn für Gegner
-- **Patt:** König nicht im Schach + keine legalen Züge → Remis
-- `GameStatus` erweitern: `Checkmate(winner: Color)`, `Stalemate`, `Check`
-- Nach jedem Zug prüfen
+- ✅ **Schachmatt:** König im Schach + keine legalen Züge → Gewinn für Gegner
+- ✅ **Patt:** König nicht im Schach + keine legalen Züge → Remis
+- ✅ `GameStatus` erweitert: `Check`, `Checkmate`, `Stalemate`
+- ✅ Nach jedem Zug automatische Prüfung
 
 ---
 
