@@ -15,25 +15,30 @@ Ziel: Inkrementelle Weiterentwicklung vom Monolith zu einer skalierbaren Archite
 
 ## 2. Aktuelle Phase und Scope
 
-**Phase:** Woche 1–2 – Projektsetup und Grundstruktur
+**Phase:** Woche 1–2 – Projektsetup, Grundstruktur und erste Zugmechanik
 
-**Im Scope:**
-- Monolith
-- MVC-Architektur
-- Text UI (TUI)
-- Funktionaler Stil
-- Grundlegende Schach-Datenstrukturen (Board, Piece, Game)
-- Test Suite mit ScalaTest
+**Implementiert:**
+- Monolith mit MVC-Architektur und Observer-Pattern
+- Text UI (TUI) mit Zugeingabe (`"e2 e4"`)
+- Funktionaler Stil im Domain-Layer (immutable, Option-basiert)
+- Domain-Typen: `Piece`, `Color`, `Position`, `Move`, `Board`, `Game`, `GameStatus`
+- `Board.move(Move)` gibt `Option[Board]` zurück
+- `Game.applyMove(Move)` validiert Figurfarbe und wechselt Spieler
+- `Controller.doMove` koordiniert Use Case und benachrichtigt Observer
+- 63 Tests in 7 Suites, CI-Pipeline auf GitHub Actions
+- Conventional Commits mit `.gitmessage`-Template
 
 **Nicht im Scope (geplant für spätere Phasen):**
-- Vollständige Schachregeln (En Passant, Rochade, Schach/Matt)
+- Legale Züge pro Figurtyp (Turm, Läufer, Dame etc.)
+- Spezialzüge (En Passant, Rochade, Bauernumwandlung)
+- Schach/Matt/Patt-Erkennung
+- Command-Pattern (Undo/Redo)
 - HTTP-API / REST
 - Persistenz (Datenbank, Dateisystem)
 - Bot / KI-Gegner
 - GUI (ScalaFX oder Web)
 - Microservices
 - Performance-Optimierung
-- Verteilte Architektur
 
 ---
 

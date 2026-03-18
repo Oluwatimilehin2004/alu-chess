@@ -92,3 +92,42 @@
 **Konsequenzen:**
 - Kürzere Imports
 - Weniger Verzeichnistiefe
+
+---
+
+## ADR-006: Position und Move als eigene Typen
+
+**Kontext:** Züge könnten als Tupel `(Int, Int, Int, Int)` oder als Strings dargestellt werden. Im Domain-Model braucht es eine klare Repräsentation.
+
+**Entscheidung:** `Position` und `Move` als eigene `case class`-Typen mit Parsing aus algebraischer Notation.
+
+**Begründung:**
+- Type Safety: Der Compiler verhindert, dass Zeile und Spalte verwechselt werden
+- Algebraische Notation (`"e2"`, `"e2 e4"`) ist die Sprache des Schachs – direkte Übersetzung in Domain-Typen
+- Parsing und Validierung zentral in Companion Objects (`Position.fromString`, `Move.fromString`)
+- Trennung von Darstellung (String) und Semantik (Position/Move) folgt dem DDD-Prinzip
+
+**Konsequenzen:**
+- Board-API wird ausdrucksstärker: `board.move(Move(...))` statt `board.move(r1, c1, r2, c2)`
+- Neue Regeln (legale Züge, Schach) können direkt auf `Position`/`Move` arbeiten
+- Geringer Overhead (zwei kleine case classes), kein Overengineering
+
+---
+
+## ADR-007: Option-basierte Zugvalidierung
+
+**Kontext:** Wenn ein ungültiger Zug versucht wird (leeres Feld, fremde Figur, Position außerhalb), muss das System reagieren.
+
+**Entscheidung:** `Board.move` und `Game.applyMove` geben `Option[Board]` bzw. `Option[Game]` zurück. Kein Exception-Wurf.
+
+**Begründung:**
+- Ungültige Züge sind **erwartbares Verhalten**, keine Ausnahmesituation
+- `Option` macht im Typsystem sichtbar, dass ein Zug fehlschlagen kann
+- Aufrufer (Controller) muss explizit mit `None` umgehen – kein versehentliches Ignorieren
+- Passt zum funktionalen Stil: pure Function ohne Seiteneffekte
+- Pattern Matching auf `Some`/`None` ist idiomatisch und lesbar
+
+**Konsequenzen:**
+- Controller prüft das Ergebnis und gibt `Boolean` an die View zurück
+- Keine try/catch-Blöcke im Zug-Flow
+- Spätere Erweiterung (z.B. `Either[MoveError, Game]` für detaillierte Fehlermeldungen) ist einfach möglich
