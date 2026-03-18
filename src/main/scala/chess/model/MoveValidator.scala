@@ -1,23 +1,26 @@
 package chess.model
 
 /** Validates whether a move is legal according to piece-specific movement rules.
-  * Checks movement patterns and path clearance (sliding pieces). */
+  * Checks movement patterns, path clearance (sliding pieces), and special moves (castling). */
 object MoveValidator:
 
   /** Check if a move is valid for the piece at move.from on the given board.
     * Assumes: piece exists at from, color check done elsewhere. */
-  def isValidMove(move: Move, board: Board): Boolean =
+  def isValidMove(move: Move, board: Board,
+                  movedPieces: Set[Position] = Set.empty,
+                  lastMove: Option[Move] = None): Boolean =
     board.cell(move.from) match
-      case Some(piece) => isValidForPiece(piece, move, board)
+      case Some(piece) => isValidForPiece(piece, move, board, movedPieces, lastMove)
       case None        => false
 
-  private def isValidForPiece(piece: Piece, move: Move, board: Board): Boolean =
+  private def isValidForPiece(piece: Piece, move: Move, board: Board,
+                              movedPieces: Set[Position], lastMove: Option[Move]): Boolean =
     piece match
       case Piece.Pawn(_)   => isValidPawnMove(piece.color, move, board)
       case Piece.Rook(_)   => isValidRookMove(move, board)
       case Piece.Bishop(_) => isValidBishopMove(move, board)
       case Piece.Queen(_)  => isValidQueenMove(move, board)
-      case Piece.King(_)   => isValidKingMove(move)
+      case Piece.King(_)   => isValidKingMove(move, board, movedPieces)
       case Piece.Knight(_) => isValidKnightMove(move)
 
   // --- Pawn ---
@@ -59,10 +62,12 @@ object MoveValidator:
 
   // --- King ---
 
-  private def isValidKingMove(move: Move): Boolean =
+  private def isValidKingMove(move: Move, board: Board, movedPieces: Set[Position]): Boolean =
     val dr = math.abs(move.to.row - move.from.row)
     val dc = math.abs(move.to.col - move.from.col)
-    dr <= 1 && dc <= 1 && (dr + dc) > 0
+    val isNormalMove = dr <= 1 && dc <= 1 && (dr + dc) > 0
+    val isCastling = dr == 0 && dc == 2 && isCastlingValid(move, board, movedPieces)
+    isNormalMove || isCastling
 
   // --- Knight ---
 
@@ -86,6 +91,48 @@ object MoveValidator:
       board.cell(pos).isEmpty
     }
 
+  // --- Castling ---
+
+  /** Validate castling: king moves 2 squares towards rook.
+    * Requirements: king + rook not moved, path clear, king not in/through/into check. */
+  private def isCastlingValid(move: Move, board: Board, movedPieces: Set[Position]): Boolean =
+    board.cell(move.from) match
+      case Some(Piece.King(color)) =>
+        val row = if color == Color.White then 0 else 7
+        val kingStart = Position(row, 4)
+        move.from == kingStart &&
+        !movedPieces.contains(kingStart) && {
+          val isKingSide = move.to.col == 6
+          val isQueenSide = move.to.col == 2
+          (isKingSide || isQueenSide) && {
+            val rookCol = if isKingSide then 7 else 0
+            val rookPos = Position(row, rookCol)
+            board.cell(rookPos).contains(Piece.Rook(color)) &&
+            !movedPieces.contains(rookPos) && {
+              val pathCols = if isKingSide then (5 to 6) else (1 to 3)
+              pathCols.forall(c => board.cell(Position(row, c)).isEmpty) &&
+              !isInCheck(board, color) && {
+                val throughCol = if isKingSide then 5 else 3
+                val throughBoard = board.clear(kingStart).put(Position(row, throughCol), Piece.King(color))
+                !isInCheck(throughBoard, color)
+              }
+            }
+          }
+        }
+      case _ => false
+
+  /** Apply special move side-effects to the board after basic piece movement.
+    * Currently handles: castling rook movement. */
+  def applyMoveEffects(move: Move, boardBefore: Board, boardAfterMove: Board): Board =
+    boardBefore.cell(move.from) match
+      case Some(Piece.King(color)) if math.abs(move.to.col - move.from.col) == 2 =>
+        val row = move.from.row
+        if move.to.col == 6 then
+          boardAfterMove.clear(Position(row, 7)).put(Position(row, 5), Piece.Rook(color))
+        else
+          boardAfterMove.clear(Position(row, 0)).put(Position(row, 3), Piece.Rook(color))
+      case _ => boardAfterMove
+
   // --- Check detection ---
 
   /** Is the king of the given color under attack? */
@@ -103,7 +150,8 @@ object MoveValidator:
     yield Position(r, c)
     positions.headOption
 
-  /** Can any piece of `attackerColor` reach `target`? */
+  /** Can any piece of `attackerColor` reach `target`?
+    * Uses basic attack patterns (no castling or en passant). */
   private def isAttackedBy(board: Board, target: Position, attackerColor: Color): Boolean =
     val attackers = for
       r <- 0 until 8
@@ -111,16 +159,31 @@ object MoveValidator:
       pos = Position(r, c)
       piece <- board.cell(pos)
       if piece.color == attackerColor
-    yield pos
+    yield (pos, piece)
 
-    attackers.exists { from =>
-      isValidMove(Move(from, target), board)
+    attackers.exists { (from, piece) =>
+      canAttackSquare(piece, Move(from, target), board)
     }
+
+  /** Check if a piece can attack a target square (basic attack patterns, no special moves). */
+  private def canAttackSquare(piece: Piece, move: Move, board: Board): Boolean =
+    piece match
+      case Piece.Pawn(_)   => isValidPawnMove(piece.color, move, board)
+      case Piece.Rook(_)   => isValidRookMove(move, board)
+      case Piece.Bishop(_) => isValidBishopMove(move, board)
+      case Piece.Queen(_)  => isValidQueenMove(move, board)
+      case Piece.King(_)   =>
+        val dr = math.abs(move.to.row - move.from.row)
+        val dc = math.abs(move.to.col - move.from.col)
+        dr <= 1 && dc <= 1 && (dr + dc) > 0
+      case Piece.Knight(_) => isValidKnightMove(move)
 
   // --- Legal move generation ---
 
   /** All legal moves for a player: piece moves that don't leave own king in check. */
-  def legalMoves(board: Board, color: Color): List[Move] =
+  def legalMoves(board: Board, color: Color,
+                 movedPieces: Set[Position] = Set.empty,
+                 lastMove: Option[Move] = None): List[Move] =
     val ownPieces = for
       r <- 0 until 8
       c <- 0 until 8
@@ -137,11 +200,13 @@ object MoveValidator:
       move = Move(from, to)
       if to != from
       if !board.cell(to).exists(_.color == color) // not capturing own piece
-      if isValidMove(move, board)
+      if isValidMove(move, board, movedPieces, lastMove)
     yield move
 
     allMoves.filter { move =>
       board.move(move) match
-        case Some(newBoard) => !isInCheck(newBoard, color)
-        case None           => false
+        case Some(newBoard) =>
+          val fullBoard = applyMoveEffects(move, board, newBoard)
+          !isInCheck(fullBoard, color)
+        case None => false
     }.toList
