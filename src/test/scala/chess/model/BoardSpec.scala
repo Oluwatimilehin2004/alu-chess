@@ -120,4 +120,49 @@ class BoardSpec extends AnyWordSpec with Matchers {
       s should include("8")
     }
   }
+
+  "Board.cell(Position)" should {
+
+    "return the piece at a valid position" in {
+      Board.initial.cell(Position(0, 4)) shouldBe Some(Piece.King(Color.White))
+    }
+
+    "return None for an empty position" in {
+      Board.empty.cell(Position(0, 0)) shouldBe None
+    }
+  }
+
+  "Board.put(Position)" should {
+
+    "place a piece via Position" in {
+      val board = Board.empty.put(Position(4, 4), Piece.Queen(Color.Black))
+      board.cell(Position(4, 4)) shouldBe Some(Piece.Queen(Color.Black))
+    }
+  }
+
+  "Board.clear(Position)" should {
+
+    "remove a piece via Position" in {
+      val board = Board.initial.clear(Position(0, 0))
+      board.cell(Position(0, 0)) shouldBe None
+    }
+  }
+
+  "Board.move" should {
+
+    "move a piece from one position to another" in {
+      val board = Board.initial
+      val m = Move(Position(1, 4), Position(3, 4)) // e2 -> e4
+      val result = board.move(m)
+      result shouldBe defined
+      result.get.cell(Position(3, 4)) shouldBe Some(Piece.Pawn(Color.White))
+      result.get.cell(Position(1, 4)) shouldBe None
+    }
+
+    "return None when source square is empty" in {
+      val board = Board.empty
+      val m = Move(Position(0, 0), Position(1, 0))
+      board.move(m) shouldBe None
+    }
+  }
 }

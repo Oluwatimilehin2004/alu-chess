@@ -16,6 +16,10 @@ class GameSpec extends AnyWordSpec with Matchers {
     "have an initial board" in {
       game.board shouldBe Board.initial
     }
+
+    "have status Playing" in {
+      game.status shouldBe GameStatus.Playing
+    }
   }
 
   "switchPlayer" should {
@@ -28,6 +32,39 @@ class GameSpec extends AnyWordSpec with Matchers {
     "toggle from black back to white" in {
       val game = Game.newGame.switchPlayer.switchPlayer
       game.currentPlayer shouldBe Color.White
+    }
+  }
+
+  "applyMove" should {
+
+    "move a white pawn from e2 to e4" in {
+      val game = Game.newGame
+      val move = Move(Position(1, 4), Position(3, 4))
+      val result = game.applyMove(move)
+      result shouldBe defined
+      result.get.board.cell(Position(3, 4)) shouldBe Some(Piece.Pawn(Color.White))
+      result.get.board.cell(Position(1, 4)) shouldBe None
+      result.get.currentPlayer shouldBe Color.Black
+    }
+
+    "reject a move from an empty square" in {
+      val game = Game.newGame
+      val move = Move(Position(3, 3), Position(4, 3))
+      game.applyMove(move) shouldBe None
+    }
+
+    "reject a move of the opponent's piece" in {
+      val game = Game.newGame
+      val move = Move(Position(6, 4), Position(4, 4)) // black pawn, but white's turn
+      game.applyMove(move) shouldBe None
+    }
+  }
+
+  "resign" should {
+
+    "set status to Resigned" in {
+      val game = Game.newGame.resign
+      game.status shouldBe GameStatus.Resigned
     }
   }
 }

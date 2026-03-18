@@ -27,7 +27,20 @@ class TUISpec extends AnyWordSpec with Matchers {
       tui.processInput("") shouldBe true
     }
 
-    "process unknown input and return true (continue)" in {
+    "process a valid move like 'e2 e4'" in {
+      val controller = Controller()
+      val tui = TUI(controller)
+      tui.processInput("e2 e4") shouldBe true
+      controller.game.board.cell(chess.model.Position(3, 4)) shouldBe Some(chess.model.Piece.Pawn(chess.model.Color.White))
+    }
+
+    "process an invalid move and return true (continue)" in {
+      val controller = Controller()
+      val tui = TUI(controller)
+      tui.processInput("e5 e6") shouldBe true // empty square, move rejected
+    }
+
+    "process unparseable input and return true (continue)" in {
       val controller = Controller()
       val tui = TUI(controller)
       tui.processInput("xyz") shouldBe true
