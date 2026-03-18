@@ -165,4 +165,203 @@ class GameSpec extends AnyWordSpec with Matchers {
       game.status shouldBe GameStatus.Resigned
     }
   }
+
+  // ---------- Castling ----------
+
+  "Castling" should {
+
+    "move the rook on white king-side castling" in {
+      val board = Board.empty
+        .put(Position(0, 4), Piece.King(Color.White))
+        .put(Position(0, 7), Piece.Rook(Color.White))
+        .put(Position(7, 4), Piece.King(Color.Black))
+      val game = Game(board, Color.White, GameStatus.Playing)
+      val move = Move(Position(0, 4), Position(0, 6))
+      val result = game.applyMove(move)
+      result shouldBe defined
+      result.get.board.cell(Position(0, 6)) shouldBe Some(Piece.King(Color.White))
+      result.get.board.cell(Position(0, 5)) shouldBe Some(Piece.Rook(Color.White))
+      result.get.board.cell(Position(0, 7)) shouldBe None
+      result.get.board.cell(Position(0, 4)) shouldBe None
+    }
+
+    "move the rook on white queen-side castling" in {
+      val board = Board.empty
+        .put(Position(0, 4), Piece.King(Color.White))
+        .put(Position(0, 0), Piece.Rook(Color.White))
+        .put(Position(7, 4), Piece.King(Color.Black))
+      val game = Game(board, Color.White, GameStatus.Playing)
+      val move = Move(Position(0, 4), Position(0, 2))
+      val result = game.applyMove(move)
+      result shouldBe defined
+      result.get.board.cell(Position(0, 2)) shouldBe Some(Piece.King(Color.White))
+      result.get.board.cell(Position(0, 3)) shouldBe Some(Piece.Rook(Color.White))
+      result.get.board.cell(Position(0, 0)) shouldBe None
+      result.get.board.cell(Position(0, 4)) shouldBe None
+    }
+
+    "prevent castling after king has moved" in {
+      val board = Board.empty
+        .put(Position(0, 4), Piece.King(Color.White))
+        .put(Position(0, 7), Piece.Rook(Color.White))
+        .put(Position(7, 4), Piece.King(Color.Black))
+      val game = Game(board, Color.White, GameStatus.Playing, movedPieces = Set(Position(0, 4)))
+      val move = Move(Position(0, 4), Position(0, 6))
+      game.applyMove(move) shouldBe None
+    }
+
+    "track movedPieces after castling" in {
+      val board = Board.empty
+        .put(Position(0, 4), Piece.King(Color.White))
+        .put(Position(0, 7), Piece.Rook(Color.White))
+        .put(Position(7, 4), Piece.King(Color.Black))
+      val game = Game(board, Color.White, GameStatus.Playing)
+      val move = Move(Position(0, 4), Position(0, 6))
+      val result = game.applyMove(move)
+      result shouldBe defined
+      result.get.movedPieces should contain(Position(0, 4))
+    }
+  }
+
+  // ---------- En Passant ----------
+
+  "En Passant" should {
+
+    "capture the opponent's pawn" in {
+      val board = Board.empty
+        .put(Position(4, 4), Piece.Pawn(Color.White))
+        .put(Position(4, 3), Piece.Pawn(Color.Black))
+        .put(Position(0, 4), Piece.King(Color.White))
+        .put(Position(7, 4), Piece.King(Color.Black))
+      val lastMove = Some(Move(Position(6, 3), Position(4, 3)))
+      val game = Game(board, Color.White, GameStatus.Playing, lastMove = lastMove)
+      val move = Move(Position(4, 4), Position(5, 3))
+      val result = game.applyMove(move)
+      result shouldBe defined
+      result.get.board.cell(Position(5, 3)) shouldBe Some(Piece.Pawn(Color.White))
+      result.get.board.cell(Position(4, 3)) shouldBe None
+      result.get.board.cell(Position(4, 4)) shouldBe None
+    }
+
+    "reject en passant without opponent double push" in {
+      val board = Board.empty
+        .put(Position(4, 4), Piece.Pawn(Color.White))
+        .put(Position(4, 3), Piece.Pawn(Color.Black))
+        .put(Position(0, 4), Piece.King(Color.White))
+        .put(Position(7, 4), Piece.King(Color.Black))
+      val lastMove = Some(Move(Position(5, 3), Position(4, 3)))
+      val game = Game(board, Color.White, GameStatus.Playing, lastMove = lastMove)
+      val move = Move(Position(4, 4), Position(5, 3))
+      game.applyMove(move) shouldBe None
+    }
+  }
+
+  // ---------- Promotion ----------
+
+  "Promotion" should {
+
+    "auto-promote pawn to queen" in {
+      val board = Board.empty
+        .put(Position(6, 0), Piece.Pawn(Color.White))
+        .put(Position(0, 4), Piece.King(Color.White))
+        .put(Position(7, 4), Piece.King(Color.Black))
+      val game = Game(board, Color.White, GameStatus.Playing)
+      val move = Move(Position(6, 0), Position(7, 0))
+      val result = game.applyMove(move)
+      result shouldBe defined
+      result.get.board.cell(Position(7, 0)) shouldBe Some(Piece.Queen(Color.White))
+    }
+
+    "promote pawn to specified knight" in {
+      val board = Board.empty
+        .put(Position(6, 0), Piece.Pawn(Color.White))
+        .put(Position(0, 4), Piece.King(Color.White))
+        .put(Position(7, 4), Piece.King(Color.Black))
+      val game = Game(board, Color.White, GameStatus.Playing)
+      val move = Move(Position(6, 0), Position(7, 0), Some('N'))
+      val result = game.applyMove(move)
+      result shouldBe defined
+      result.get.board.cell(Position(7, 0)) shouldBe Some(Piece.Knight(Color.White))
+    }
+
+    "promote pawn to rook on capture" in {
+      val board = Board.empty
+        .put(Position(6, 0), Piece.Pawn(Color.White))
+        .put(Position(7, 1), Piece.Knight(Color.Black))
+        .put(Position(0, 4), Piece.King(Color.White))
+        .put(Position(7, 4), Piece.King(Color.Black))
+      val game = Game(board, Color.White, GameStatus.Playing)
+      val move = Move(Position(6, 0), Position(7, 1), Some('R'))
+      val result = game.applyMove(move)
+      result shouldBe defined
+      result.get.board.cell(Position(7, 1)) shouldBe Some(Piece.Rook(Color.White))
+    }
+  }
+
+  // ---------- Draw ----------
+
+  "Draw conditions" should {
+
+    "detect draw by insufficient material (K+B captures last piece)" in {
+      val board = Board.empty
+        .put(Position(0, 0), Piece.King(Color.White))
+        .put(Position(3, 3), Piece.Bishop(Color.White))
+        .put(Position(7, 7), Piece.King(Color.Black))
+        .put(Position(5, 5), Piece.Knight(Color.Black))
+      val game = Game(board, Color.White, GameStatus.Playing)
+      val move = Move(Position(3, 3), Position(5, 5))
+      val result = game.applyMove(move)
+      result shouldBe defined
+      result.get.status shouldBe GameStatus.Draw
+    }
+
+    "detect draw by 50-move rule" in {
+      val board = Board.empty
+        .put(Position(0, 0), Piece.King(Color.White))
+        .put(Position(3, 3), Piece.Rook(Color.White))
+        .put(Position(7, 7), Piece.King(Color.Black))
+      val game = Game(board, Color.White, GameStatus.Playing, halfMoveClock = 99)
+      val move = Move(Position(3, 3), Position(3, 4))
+      val result = game.applyMove(move)
+      result shouldBe defined
+      result.get.status shouldBe GameStatus.Draw
+    }
+
+    "reset halfMoveClock on pawn move" in {
+      val board = Board.empty
+        .put(Position(0, 4), Piece.King(Color.White))
+        .put(Position(1, 1), Piece.Pawn(Color.White))
+        .put(Position(7, 7), Piece.King(Color.Black))
+      val game = Game(board, Color.White, GameStatus.Playing, halfMoveClock = 50)
+      val move = Move(Position(1, 1), Position(2, 1))
+      val result = game.applyMove(move)
+      result shouldBe defined
+      result.get.halfMoveClock shouldBe 0
+    }
+
+    "reset halfMoveClock on capture" in {
+      val board = Board.empty
+        .put(Position(0, 0), Piece.King(Color.White))
+        .put(Position(3, 3), Piece.Rook(Color.White))
+        .put(Position(3, 5), Piece.Knight(Color.Black))
+        .put(Position(7, 7), Piece.King(Color.Black))
+      val game = Game(board, Color.White, GameStatus.Playing, halfMoveClock = 50)
+      val move = Move(Position(3, 3), Position(3, 5))
+      val result = game.applyMove(move)
+      result shouldBe defined
+      result.get.halfMoveClock shouldBe 0
+    }
+
+    "increment halfMoveClock on quiet move" in {
+      val board = Board.empty
+        .put(Position(0, 0), Piece.King(Color.White))
+        .put(Position(3, 3), Piece.Rook(Color.White))
+        .put(Position(7, 7), Piece.King(Color.Black))
+      val game = Game(board, Color.White, GameStatus.Playing, halfMoveClock = 10)
+      val move = Move(Position(3, 3), Position(3, 4))
+      val result = game.applyMove(move)
+      result shouldBe defined
+      result.get.halfMoveClock shouldBe 11
+    }
+  }
 }

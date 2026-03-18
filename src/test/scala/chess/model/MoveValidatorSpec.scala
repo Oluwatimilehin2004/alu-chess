@@ -361,4 +361,222 @@ class MoveValidatorSpec extends AnyWordSpec with Matchers {
       moves shouldBe empty
     }
   }
+
+  // ---------- Castling ----------
+
+  "Castling validation" should {
+
+    "allow white king-side castling" in {
+      val board = boardWith(
+        Position(0, 4) -> Piece.King(Color.White),
+        Position(0, 7) -> Piece.Rook(Color.White),
+        Position(7, 4) -> Piece.King(Color.Black)
+      )
+      val move = Move(Position(0, 4), Position(0, 6))
+      MoveValidator.isValidMove(move, board) shouldBe true
+    }
+
+    "allow white queen-side castling" in {
+      val board = boardWith(
+        Position(0, 4) -> Piece.King(Color.White),
+        Position(0, 0) -> Piece.Rook(Color.White),
+        Position(7, 4) -> Piece.King(Color.Black)
+      )
+      val move = Move(Position(0, 4), Position(0, 2))
+      MoveValidator.isValidMove(move, board) shouldBe true
+    }
+
+    "allow black king-side castling" in {
+      val board = boardWith(
+        Position(7, 4) -> Piece.King(Color.Black),
+        Position(7, 7) -> Piece.Rook(Color.Black),
+        Position(0, 4) -> Piece.King(Color.White)
+      )
+      val move = Move(Position(7, 4), Position(7, 6))
+      MoveValidator.isValidMove(move, board) shouldBe true
+    }
+
+    "reject castling when king has moved" in {
+      val board = boardWith(
+        Position(0, 4) -> Piece.King(Color.White),
+        Position(0, 7) -> Piece.Rook(Color.White),
+        Position(7, 4) -> Piece.King(Color.Black)
+      )
+      val move = Move(Position(0, 4), Position(0, 6))
+      MoveValidator.isValidMove(move, board, movedPieces = Set(Position(0, 4))) shouldBe false
+    }
+
+    "reject castling when rook has moved" in {
+      val board = boardWith(
+        Position(0, 4) -> Piece.King(Color.White),
+        Position(0, 7) -> Piece.Rook(Color.White),
+        Position(7, 4) -> Piece.King(Color.Black)
+      )
+      val move = Move(Position(0, 4), Position(0, 6))
+      MoveValidator.isValidMove(move, board, movedPieces = Set(Position(0, 7))) shouldBe false
+    }
+
+    "reject castling when path is blocked" in {
+      val board = boardWith(
+        Position(0, 4) -> Piece.King(Color.White),
+        Position(0, 5) -> Piece.Bishop(Color.White),
+        Position(0, 7) -> Piece.Rook(Color.White),
+        Position(7, 4) -> Piece.King(Color.Black)
+      )
+      val move = Move(Position(0, 4), Position(0, 6))
+      MoveValidator.isValidMove(move, board) shouldBe false
+    }
+
+    "reject castling when king is in check" in {
+      val board = boardWith(
+        Position(0, 4) -> Piece.King(Color.White),
+        Position(0, 7) -> Piece.Rook(Color.White),
+        Position(7, 4) -> Piece.King(Color.Black),
+        Position(4, 4) -> Piece.Rook(Color.Black)
+      )
+      val move = Move(Position(0, 4), Position(0, 6))
+      MoveValidator.isValidMove(move, board) shouldBe false
+    }
+
+    "reject castling when king passes through attacked square" in {
+      val board = boardWith(
+        Position(0, 4) -> Piece.King(Color.White),
+        Position(0, 7) -> Piece.Rook(Color.White),
+        Position(7, 4) -> Piece.King(Color.Black),
+        Position(4, 5) -> Piece.Rook(Color.Black)
+      )
+      val move = Move(Position(0, 4), Position(0, 6))
+      MoveValidator.isValidMove(move, board) shouldBe false
+    }
+
+    "reject castling when no rook present" in {
+      val board = boardWith(
+        Position(0, 4) -> Piece.King(Color.White),
+        Position(7, 4) -> Piece.King(Color.Black)
+      )
+      val move = Move(Position(0, 4), Position(0, 6))
+      MoveValidator.isValidMove(move, board) shouldBe false
+    }
+  }
+
+  // ---------- En Passant ----------
+
+  "En passant validation" should {
+
+    "allow white en passant capture" in {
+      val board = boardWith(
+        Position(4, 4) -> Piece.Pawn(Color.White),
+        Position(4, 3) -> Piece.Pawn(Color.Black),
+        Position(0, 4) -> Piece.King(Color.White),
+        Position(7, 4) -> Piece.King(Color.Black)
+      )
+      val lastMove = Some(Move(Position(6, 3), Position(4, 3)))
+      val move = Move(Position(4, 4), Position(5, 3))
+      MoveValidator.isValidMove(move, board, lastMove = lastMove) shouldBe true
+    }
+
+    "allow black en passant capture" in {
+      val board = boardWith(
+        Position(3, 4) -> Piece.Pawn(Color.Black),
+        Position(3, 5) -> Piece.Pawn(Color.White),
+        Position(0, 4) -> Piece.King(Color.White),
+        Position(7, 4) -> Piece.King(Color.Black)
+      )
+      val lastMove = Some(Move(Position(1, 5), Position(3, 5)))
+      val move = Move(Position(3, 4), Position(2, 5))
+      MoveValidator.isValidMove(move, board, lastMove = lastMove) shouldBe true
+    }
+
+    "reject en passant without double push" in {
+      val board = boardWith(
+        Position(4, 4) -> Piece.Pawn(Color.White),
+        Position(4, 3) -> Piece.Pawn(Color.Black),
+        Position(0, 4) -> Piece.King(Color.White),
+        Position(7, 4) -> Piece.King(Color.Black)
+      )
+      val lastMove = Some(Move(Position(5, 3), Position(4, 3)))
+      val move = Move(Position(4, 4), Position(5, 3))
+      MoveValidator.isValidMove(move, board, lastMove = lastMove) shouldBe false
+    }
+
+    "reject en passant without last move" in {
+      val board = boardWith(
+        Position(4, 4) -> Piece.Pawn(Color.White),
+        Position(4, 3) -> Piece.Pawn(Color.Black),
+        Position(0, 4) -> Piece.King(Color.White),
+        Position(7, 4) -> Piece.King(Color.Black)
+      )
+      val move = Move(Position(4, 4), Position(5, 3))
+      MoveValidator.isValidMove(move, board) shouldBe false
+    }
+  }
+
+  // ---------- Insufficient Material ----------
+
+  "isInsufficientMaterial" should {
+
+    "detect K vs K" in {
+      val board = boardWith(
+        Position(0, 0) -> Piece.King(Color.White),
+        Position(7, 7) -> Piece.King(Color.Black)
+      )
+      MoveValidator.isInsufficientMaterial(board) shouldBe true
+    }
+
+    "detect K+B vs K" in {
+      val board = boardWith(
+        Position(0, 0) -> Piece.King(Color.White),
+        Position(2, 2) -> Piece.Bishop(Color.White),
+        Position(7, 7) -> Piece.King(Color.Black)
+      )
+      MoveValidator.isInsufficientMaterial(board) shouldBe true
+    }
+
+    "detect K+N vs K" in {
+      val board = boardWith(
+        Position(0, 0) -> Piece.King(Color.White),
+        Position(2, 1) -> Piece.Knight(Color.White),
+        Position(7, 7) -> Piece.King(Color.Black)
+      )
+      MoveValidator.isInsufficientMaterial(board) shouldBe true
+    }
+
+    "detect K+B vs K+B on same color squares" in {
+      val board = boardWith(
+        Position(0, 0) -> Piece.King(Color.White),
+        Position(0, 2) -> Piece.Bishop(Color.White),
+        Position(7, 7) -> Piece.King(Color.Black),
+        Position(7, 5) -> Piece.Bishop(Color.Black)
+      )
+      MoveValidator.isInsufficientMaterial(board) shouldBe true
+    }
+
+    "not detect insufficient material for K+B vs K+B on different color squares" in {
+      val board = boardWith(
+        Position(0, 0) -> Piece.King(Color.White),
+        Position(0, 2) -> Piece.Bishop(Color.White),
+        Position(7, 7) -> Piece.King(Color.Black),
+        Position(7, 6) -> Piece.Bishop(Color.Black)
+      )
+      MoveValidator.isInsufficientMaterial(board) shouldBe false
+    }
+
+    "not detect insufficient material with queen on board" in {
+      val board = boardWith(
+        Position(0, 0) -> Piece.King(Color.White),
+        Position(3, 3) -> Piece.Queen(Color.White),
+        Position(7, 7) -> Piece.King(Color.Black)
+      )
+      MoveValidator.isInsufficientMaterial(board) shouldBe false
+    }
+
+    "not detect insufficient material with pawn on board" in {
+      val board = boardWith(
+        Position(0, 0) -> Piece.King(Color.White),
+        Position(1, 0) -> Piece.Pawn(Color.White),
+        Position(7, 7) -> Piece.King(Color.Black)
+      )
+      MoveValidator.isInsufficientMaterial(board) shouldBe false
+    }
+  }
 }
