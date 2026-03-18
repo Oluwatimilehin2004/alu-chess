@@ -33,3 +33,4 @@ class Controller extends ControllerInterface with Observable:
       case GameStatus.Checkmate  => s"Schachmatt! ${_game.currentPlayer.opposite} gewinnt"
       case GameStatus.Stalemate  => s"Patt – Unentschieden"
       case GameStatus.Resigned   => s"Aufgegeben"
+      case GameStatus.Draw       => s"Remis – Unentschieden"

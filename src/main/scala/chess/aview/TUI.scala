@@ -32,7 +32,7 @@ class TUI(controller: ControllerInterface) extends Observer:
         true
       case moveStr =>
         val gameOver = controller.game.status match
-          case GameStatus.Checkmate | GameStatus.Stalemate | GameStatus.Resigned => true
+          case GameStatus.Checkmate | GameStatus.Stalemate | GameStatus.Resigned | GameStatus.Draw => true
           case _ => false
         if gameOver then
           println("Spiel ist beendet. 'n' für neues Spiel oder 'q' zum Beenden.")

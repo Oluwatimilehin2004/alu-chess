@@ -162,6 +162,39 @@ object MoveValidator:
         afterEnPassant.clear(move.to).put(move.to, promotedPiece)
       case _ => afterEnPassant
 
+  // --- Draw detection ---
+
+  /** Check if the remaining material is insufficient for checkmate.
+    * K vs K, K+B vs K, K+N vs K, K+B vs K+B (same color squares). */
+  def isInsufficientMaterial(board: Board): Boolean =
+    val pieces = for
+      r <- 0 until 8
+      c <- 0 until 8
+      piece <- board.cell(r, c)
+    yield (piece, r, c)
+
+    val nonKingPieces = pieces.filter { (p, _, _) =>
+      p match
+        case Piece.King(_) => false
+        case _ => true
+    }
+
+    nonKingPieces.isEmpty || // K vs K
+    (nonKingPieces.size == 1 && nonKingPieces.exists { (p, _, _) =>
+      p match
+        case Piece.Bishop(_) | Piece.Knight(_) => true
+        case _ => false
+    }) ||
+    // K+B vs K+B with both bishops on same color square
+    (nonKingPieces.size == 2 && nonKingPieces.forall { (p, _, _) =>
+      p match
+        case Piece.Bishop(_) => true
+        case _ => false
+    } && {
+      val bishopSquareColors = nonKingPieces.map { (_, r, c) => (r + c) % 2 }
+      bishopSquareColors.distinct.size == 1
+    })
+
   // --- Check detection ---
 
   /** Is the king of the given color under attack? */
