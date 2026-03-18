@@ -1,7 +1,7 @@
 package chess.model
 
 /** Validates whether a move is legal according to piece-specific movement rules.
-  * Checks movement patterns, path clearance (sliding pieces), and special moves (castling, en passant). */
+  * Checks movement patterns, path clearance (sliding pieces), and special moves (castling, en passant, promotion). */
 object MoveValidator:
 
   /** Check if a move is valid for the piece at move.from on the given board.
@@ -133,7 +133,7 @@ object MoveValidator:
       case _ => false
 
   /** Apply special move side-effects to the board after basic piece movement.
-    * Handles: castling rook movement, en passant capture. */
+    * Handles: castling rook movement, en passant capture, pawn promotion. */
   def applyMoveEffects(move: Move, boardBefore: Board, boardAfterMove: Board): Board =
     // Castling: move the rook
     val afterCastling = boardBefore.cell(move.from) match
@@ -146,10 +146,21 @@ object MoveValidator:
       case _ => boardAfterMove
 
     // En passant: remove captured pawn (diagonal pawn move to empty square)
-    boardBefore.cell(move.from) match
+    val afterEnPassant = boardBefore.cell(move.from) match
       case Some(Piece.Pawn(_)) if move.from.col != move.to.col && boardBefore.cell(move.to).isEmpty =>
         afterCastling.clear(Position(move.from.row, move.to.col))
       case _ => afterCastling
+
+    // Promotion: pawn reaches last rank
+    boardBefore.cell(move.from) match
+      case Some(Piece.Pawn(color)) if move.to.row == 0 || move.to.row == 7 =>
+        val promotedPiece = move.promotion match
+          case Some('R') => Piece.Rook(color)
+          case Some('B') => Piece.Bishop(color)
+          case Some('N') => Piece.Knight(color)
+          case _         => Piece.Queen(color) // default to queen
+        afterEnPassant.clear(move.to).put(move.to, promotedPiece)
+      case _ => afterEnPassant
 
   // --- Check detection ---
 

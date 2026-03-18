@@ -14,7 +14,7 @@ case class Game(board: Board, currentPlayer: Color, status: GameStatus, movedPie
     * 3. Move is valid for the piece type (pattern + path clearance + special rules)
     * 4. Move does not leave own king in check
     * After the move, determines new game status (Check, Checkmate, Stalemate).
-    * Handles special moves: castling rook movement.
+    * Handles special moves: castling rook movement, en passant capture, pawn promotion.
     * Returns None on failure. */
   def applyMove(m: Move): Option[Game] =
     board.cell(m.from) match

@@ -13,7 +13,7 @@ class TUI(controller: ControllerInterface) extends Observer:
     println(controller.statusText)
 
   def inputLoop(): Unit =
-    println("alu-chess – Befehle: 'n' = neues Spiel, 'q' = beenden, oder Zug z.B. 'e2 e4'")
+    println("alu-chess – Befehle: 'n' = neues Spiel, 'q' = beenden, oder Zug z.B. 'e2 e4' (Promotion: 'e7 e8 Q')")
     update()
     var running = true
     while running do
@@ -46,5 +46,5 @@ class TUI(controller: ControllerInterface) extends Observer:
                 println(s"Ungültiger Zug: $moveStr")
                 true
             case None =>
-              println(s"Eingabe nicht erkannt: '$moveStr'. Format: 'e2 e4'")
+              println(s"Eingabe nicht erkannt: '$moveStr'. Format: 'e2 e4' oder 'e7 e8 Q'")
               true
