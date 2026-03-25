@@ -27,10 +27,16 @@ class SwingGUI(controller: ControllerInterface) extends Frame with Observer:
     onQuit = () => { dispose(); controller.quit() }
   )
 
+  private val sideScroll = new ScrollPane(sidePanel):
+    horizontalScrollBarPolicy = ScrollPane.BarPolicy.Never
+    verticalScrollBarPolicy = ScrollPane.BarPolicy.AsNeeded
+    border = Swing.EmptyBorder(0, 0, 0, 0)
+    preferredSize = new Dimension(332, 0)
+
   contents = new BorderPanel:
     background = new AwtColor(38, 36, 33)
     layout(boardPanel) = BorderPanel.Position.Center
-    layout(sidePanel) = BorderPanel.Position.East
+    layout(sideScroll) = BorderPanel.Position.East
 
   peer.setDefaultCloseOperation(WindowConstants.EXIT_ON_CLOSE)
   pack()
