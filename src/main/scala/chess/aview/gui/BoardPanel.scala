@@ -27,8 +27,8 @@ class BoardPanel(controller: ControllerInterface, squareSize: Int = 72) extends 
   private val darkSquare = new AwtColor(181, 136, 99)      // warm brown
   private val selectedLight = new AwtColor(247, 247, 105)   // yellow highlight
   private val selectedDark = new AwtColor(218, 195, 71)     // darker yellow
-  private val legalDotColor = new AwtColor(0, 0, 0, 50)     // semi-transparent dot
-  private val legalCaptureColor = new AwtColor(0, 0, 0, 50) // capture ring
+  private val legalDotColor     = new AwtColor(0, 0, 0, 70)   // semi-transparent dot
+  private val legalCaptureColor = new AwtColor(0, 0, 0, 130) // capture ring – higher opacity for visibility
   private val lastMoveLight = new AwtColor(205, 210, 106)   // light green
   private val lastMoveDark = new AwtColor(170, 162, 58)     // dark green
   private val checkColor = new AwtColor(235, 97, 80, 180)   // red glow for check
@@ -36,6 +36,13 @@ class BoardPanel(controller: ControllerInterface, squareSize: Int = 72) extends 
   private val coordColor = new AwtColor(140, 130, 120)      // coordinate labels
 
   private val margin = 20
+
+  // --- Cached fonts and colors (avoid allocations on every repaint) ---
+  private val pieceFont       = new Font("Segoe UI Symbol", Font.PLAIN, (squareSize * 0.78).toInt)
+  private val coordFont       = new Font("SansSerif", Font.BOLD, 11)
+  private val whitePieceColor = new AwtColor(255, 255, 255)
+  private val blackPieceColor = new AwtColor(30, 30, 30)
+  private val pieceShadowColor = new AwtColor(0, 0, 0, 80)
 
   // --- Unicode chess pieces ---
   private def pieceUnicode(piece: Piece): String = piece match
@@ -113,18 +120,18 @@ class BoardPanel(controller: ControllerInterface, squareSize: Int = 72) extends 
 
       // Draw piece
       board.cell(pos).foreach { piece =>
-        g.setFont(new Font("Segoe UI Symbol", Font.PLAIN, (squareSize * 0.78).toInt))
+        g.setFont(pieceFont)
         val text = pieceUnicode(piece)
         val fm = g.getFontMetrics
         val tx = x + (squareSize - fm.stringWidth(text)) / 2
         val ty = y + (squareSize - fm.getHeight) / 2 + fm.getAscent
 
         // Shadow
-        g.setColor(new AwtColor(0, 0, 0, 80))
+        g.setColor(pieceShadowColor)
         g.drawString(text, tx + 1, ty + 1)
 
         // Piece
-        g.setColor(if piece.color == Color.White then new AwtColor(255, 255, 255) else new AwtColor(30, 30, 30))
+        g.setColor(if piece.color == Color.White then whitePieceColor else blackPieceColor)
         g.drawString(text, tx, ty)
       }
 
@@ -147,7 +154,7 @@ class BoardPanel(controller: ControllerInterface, squareSize: Int = 72) extends 
           g.fillOval(dx, dy, dotSize, dotSize)
 
     // Draw coordinates
-    g.setFont(new Font("SansSerif", Font.BOLD, 11))
+    g.setFont(coordFont)
     g.setColor(coordColor)
     for col <- 0 until 8 do
       val letter = ('a' + col).toChar.toString

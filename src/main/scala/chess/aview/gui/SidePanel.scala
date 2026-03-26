@@ -6,8 +6,9 @@ import chess.model.{GameStatus, TestPositions, Fen, Move, ChessError}
 import scala.swing.*
 import scala.swing.event.*
 import java.awt.{Color as AwtColor, Font, Dimension, Cursor}
+import java.awt.event.{MouseAdapter, MouseEvent}
+import javax.swing.{JOptionPane, BorderFactory, DefaultListCellRenderer}
 import javax.swing.border.EmptyBorder
-import javax.swing.JOptionPane
 
 /** Side panel showing game status, move info, and control buttons. */
 class SidePanel(controller: ControllerInterface, onNewGame: () => Unit, onQuit: () => Unit) extends BoxPanel(Orientation.Vertical):
@@ -24,6 +25,11 @@ class SidePanel(controller: ControllerInterface, onNewGame: () => Unit, onQuit: 
 
   private def centerAlign(component: Component): Unit =
     component.xLayoutAlignment = 0.5
+
+  private def styledSeparator(): Separator =
+    val sep = new Separator
+    sep.peer.setForeground(new AwtColor(65, 63, 60))
+    sep
 
   // --- Title ---
   private val titleLabel = new Label("alu-chess"):
@@ -53,18 +59,37 @@ class SidePanel(controller: ControllerInterface, onNewGame: () => Unit, onQuit: 
     horizontalAlignment = Alignment.Center
   centerAlign(moveLabel)
 
+  // --- Cached fonts and colors for refresh() ---
+  private val statusFontAlert  = new Font("SansSerif", Font.BOLD, 17)
+  private val statusFontNormal = new Font("SansSerif", Font.PLAIN, 15)
+  private val colorCheck       = new AwtColor(255, 180, 70)
+  private val colorCheckmate   = new AwtColor(235, 97, 80)
+  private val colorDraw        = new AwtColor(180, 180, 100)
+  private val colorStatus      = new AwtColor(200, 200, 200)
+
   // --- Buttons ---
+  private val btnNormal = new AwtColor(68, 66, 63)
+  private val btnHover  = new AwtColor(92, 90, 87)
+  private val btnPress  = new AwtColor(50, 48, 46)
+
   private def styledButton(text: String, onClick: () => Unit): Button =
     val btn = new Button(text)
     btn.font = new Font("SansSerif", Font.BOLD, 13)
     btn.foreground = new AwtColor(230, 230, 230)
-    btn.background = new AwtColor(68, 66, 63)
+    btn.background = btnNormal
     btn.opaque = true
     btn.borderPainted = false
     btn.focusPainted = false
     btn.cursor = new Cursor(Cursor.HAND_CURSOR)
     btn.preferredSize = new Dimension(contentWidth, 34)
     btn.maximumSize = new Dimension(contentWidth, 34)
+    btn.peer.addMouseListener(new MouseAdapter:
+      override def mouseEntered(e: MouseEvent): Unit = btn.background = btnHover
+      override def mouseExited(e: MouseEvent): Unit  = btn.background = btnNormal
+      override def mousePressed(e: MouseEvent): Unit = btn.background = btnPress
+      override def mouseReleased(e: MouseEvent): Unit =
+        btn.background = if btn.peer.getModel.isRollover then btnHover else btnNormal
+    )
     btn.listenTo(btn)
     btn.reactions += { case ButtonClicked(_) => onClick() }
     centerAlign(btn)
@@ -75,7 +100,10 @@ class SidePanel(controller: ControllerInterface, onNewGame: () => Unit, onQuit: 
     input.foreground = new AwtColor(230, 230, 230)
     input.background = new AwtColor(55, 53, 50)
     input.caret.color = new AwtColor(230, 230, 230)
-    input.border = new EmptyBorder(6, 8, 6, 8)
+    input.peer.setBorder(BorderFactory.createCompoundBorder(
+      BorderFactory.createLineBorder(new AwtColor(75, 73, 70), 1),
+      BorderFactory.createEmptyBorder(5, 8, 5, 8)
+    ))
     centerAlign(input)
 
   private def showError(message: String): Unit =
@@ -151,6 +179,9 @@ class SidePanel(controller: ControllerInterface, onNewGame: () => Unit, onQuit: 
   private val pgnScrollPane = new ScrollPane(pgnInputArea):
     preferredSize = new Dimension(contentWidth, 110)
     maximumSize = new Dimension(contentWidth, 110)
+    peer.setBorder(BorderFactory.createLineBorder(new AwtColor(75, 73, 70), 1))
+    peer.getViewport.setBackground(new AwtColor(55, 53, 50))
+    peer.getVerticalScrollBar.setBackground(new AwtColor(55, 53, 50))
   centerAlign(pgnScrollPane)
 
   private val applyPgnButton = styledButton("PGN anwenden", () =>
@@ -180,18 +211,38 @@ class SidePanel(controller: ControllerInterface, onNewGame: () => Unit, onQuit: 
 
   private val selectableTestPositions = TestPositions.positions.filter(_.fen.nonEmpty)
 
+  private val comboInputBg  = new AwtColor(55, 53, 50)
+  private val comboSelBg    = new AwtColor(90, 88, 85)
+  private val comboFg       = new AwtColor(230, 230, 230)
+
   private val positionCombo = new ComboBox(selectableTestPositions.map(_.name)):
     font = new Font("SansSerif", Font.PLAIN, 12)
     preferredSize = new Dimension(contentWidth, 30)
     maximumSize = new Dimension(contentWidth, 30)
+    peer.setBackground(comboInputBg)
+    peer.setForeground(comboFg)
+    peer.setRenderer(new DefaultListCellRenderer:
+      override def getListCellRendererComponent(
+          list: javax.swing.JList[?], value: Object, index: Int,
+          isSelected: Boolean, cellHasFocus: Boolean): java.awt.Component =
+        val c = super.getListCellRendererComponent(list, value, index, isSelected, cellHasFocus)
+        c.setFont(new Font("SansSerif", Font.PLAIN, 12))
+        if isSelected then
+          c.setBackground(comboSelBg)
+          c.setForeground(comboFg)
+        else
+          c.setBackground(comboInputBg)
+          c.setForeground(comboFg)
+        c
+    )
   centerAlign(positionCombo)
 
   private val positionDescLabel = new Label(""):
     font = new Font("SansSerif", Font.ITALIC, 11)
     foreground = new AwtColor(160, 160, 160)
     horizontalAlignment = Alignment.Center
-    preferredSize = new Dimension(contentWidth, 36)
-    maximumSize = new Dimension(contentWidth, 44)
+    preferredSize = new Dimension(contentWidth, 40)
+    maximumSize = new Dimension(contentWidth, 40)
   centerAlign(positionDescLabel)
 
   private val loadPositionButton = styledButton("Stellung laden", () => loadSelectedPosition())
@@ -213,7 +264,7 @@ class SidePanel(controller: ControllerInterface, onNewGame: () => Unit, onQuit: 
   // Layout
   contents += titleLabel
   contents += Swing.VStrut(sectionGap)
-  contents += new Separator
+  contents += styledSeparator()
   contents += Swing.VStrut(sectionGap)
   contents += playerLabel
   contents += Swing.VStrut(smallGap)
@@ -221,13 +272,13 @@ class SidePanel(controller: ControllerInterface, onNewGame: () => Unit, onQuit: 
   contents += Swing.VStrut(smallGap)
   contents += moveLabel
   contents += Swing.VStrut(sectionGap)
-  contents += new Separator
+  contents += styledSeparator()
   contents += Swing.VStrut(sectionGap)
   contents += newGameButton
   contents += Swing.VStrut(smallGap)
   contents += quitButton
   contents += Swing.VStrut(sectionGap)
-  contents += new Separator
+  contents += styledSeparator()
   contents += Swing.VStrut(sectionGap)
   contents += fenInputLabel
   contents += Swing.VStrut(smallGap)
@@ -237,7 +288,7 @@ class SidePanel(controller: ControllerInterface, onNewGame: () => Unit, onQuit: 
   contents += Swing.VStrut(smallGap)
   contents += loadFenButton
   contents += Swing.VStrut(sectionGap)
-  contents += new Separator
+  contents += styledSeparator()
   contents += Swing.VStrut(sectionGap)
   contents += testPositionLabel
   contents += Swing.VStrut(smallGap)
@@ -247,7 +298,7 @@ class SidePanel(controller: ControllerInterface, onNewGame: () => Unit, onQuit: 
   contents += Swing.VStrut(smallGap)
   contents += loadPositionButton
   contents += Swing.VStrut(sectionGap)
-  contents += new Separator
+  contents += styledSeparator()
   contents += Swing.VStrut(sectionGap)
   contents += pgnInputLabel
   contents += Swing.VStrut(4)
@@ -268,16 +319,19 @@ class SidePanel(controller: ControllerInterface, onNewGame: () => Unit, onQuit: 
     statusLabel.text = game.status match
       case GameStatus.Playing   => "am Zug"
       case GameStatus.Check     => "Schach!"
-      case GameStatus.Checkmate => s"Schachmatt!"
+      case GameStatus.Checkmate => "Schachmatt!"
       case GameStatus.Stalemate => "Patt – Remis"
       case GameStatus.Resigned  => "Aufgegeben"
       case GameStatus.Draw      => "Remis"
 
+    val isAlert = game.status == GameStatus.Check || game.status == GameStatus.Checkmate
+    statusLabel.font = if isAlert then statusFontAlert else statusFontNormal
+
     statusLabel.foreground = game.status match
-      case GameStatus.Check     => new AwtColor(255, 180, 70)
-      case GameStatus.Checkmate => new AwtColor(235, 97, 80)
-      case GameStatus.Stalemate | GameStatus.Draw => new AwtColor(180, 180, 100)
-      case _ => new AwtColor(200, 200, 200)
+      case GameStatus.Check     => colorCheck
+      case GameStatus.Checkmate => colorCheckmate
+      case GameStatus.Stalemate | GameStatus.Draw => colorDraw
+      case _ => colorStatus
 
     val lastMoveStr = game.lastMove.map(_.toString).getOrElse("–")
     moveLabel.text = s"Letzter Zug: $lastMoveStr"
