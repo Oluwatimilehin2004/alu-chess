@@ -155,7 +155,7 @@ class FenSpec extends AnyWordSpec with Matchers:
       val result = Fen.parseE(fen)
       result shouldBe a[Right[?, ?]]
       result.map(_.currentPlayer) shouldBe Right(Color.White)
-      result.map(_.status) shouldBe Right(GameStatus.Playing)
+      result.map(_.status) shouldBe Right(GameStatus.Draw)
       result.map(_.board.cell(Position(4, 2))) shouldBe Right(Some(Piece.King(Color.Black)))
       result.map(_.board.cell(Position(3, 4))) shouldBe Right(Some(Piece.King(Color.White)))
     }

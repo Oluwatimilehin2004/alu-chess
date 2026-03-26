@@ -28,7 +28,8 @@ object Fen:
         val enPassantStr = if parts.length > 3 then parts(3) else "-"
         val lastMove = parseEnPassant(enPassantStr)
         val halfMoveClock = if parts.length > 4 then parts(4).toIntOption.getOrElse(0) else 0
-        Game(board, color, GameStatus.Playing, movedPieces, lastMove, halfMoveClock)
+        val initial = Game(board, color, GameStatus.Playing, movedPieces, lastMove, halfMoveClock)
+        computeInitialStatus(initial)
       }
 
   /** Parse a FEN string into a Game. Returns Failure with exception on invalid input. */
@@ -47,6 +48,20 @@ object Fen:
     val halfMove = game.halfMoveClock
     val fullMove = 1 // simplified
     s"$boardStr $colorStr $castlingStr $epStr $halfMove $fullMove"
+
+  private def computeInitialStatus(game: Game): Game =
+    val color   = game.currentPlayer
+    val board   = game.board
+    val inCheck = MoveValidator.isInCheck(board, color)
+    val hasMoves = MoveValidator.legalMoves(board, color, game.movedPieces, game.lastMove).nonEmpty
+    val status =
+      if inCheck && !hasMoves then GameStatus.Checkmate
+      else if !inCheck && !hasMoves then GameStatus.Stalemate
+      else if MoveValidator.isInsufficientMaterial(board) then GameStatus.Draw
+      else if game.halfMoveClock >= 100 then GameStatus.Draw
+      else if inCheck then GameStatus.Check
+      else GameStatus.Playing
+    game.copy(status = status)
 
   private def parseBoardE(placement: String): Either[ChessError, Board] =
     val ranks = placement.split('/')
