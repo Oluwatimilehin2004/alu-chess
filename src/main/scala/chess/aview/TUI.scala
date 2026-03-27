@@ -1,7 +1,7 @@
 package chess.aview
 
 import chess.controller.ControllerInterface
-import chess.model.Move
+import chess.model.{Move, GameStatus}
 import chess.util.Observer
 import scala.io.StdIn
 
@@ -13,7 +13,7 @@ class TUI(controller: ControllerInterface) extends Observer:
     println(controller.statusText)
 
   def inputLoop(): Unit =
-    println("alu-chess – Befehle: 'n' = neues Spiel, 'q' = beenden, oder Zug z.B. 'e2 e4'")
+    println("alu-chess – Befehle: 'n' = neues Spiel, 'q' = beenden, oder Zug z.B. 'e2 e4' (Promotion: 'e7 e8 Q')")
     update()
     var running = true
     while running do
@@ -31,13 +31,20 @@ class TUI(controller: ControllerInterface) extends Observer:
       case "" =>
         true
       case moveStr =>
-        Move.fromString(moveStr) match
-          case Some(move) =>
-            if controller.doMove(move) then
+        val gameOver = controller.game.status match
+          case GameStatus.Checkmate | GameStatus.Stalemate | GameStatus.Resigned | GameStatus.Draw => true
+          case _ => false
+        if gameOver then
+          println("Spiel ist beendet. 'n' für neues Spiel oder 'q' zum Beenden.")
+          true
+        else
+          Move.fromString(moveStr) match
+            case Some(move) =>
+              if controller.doMove(move) then
+                true
+              else
+                println(s"Ungültiger Zug: $moveStr")
+                true
+            case None =>
+              println(s"Eingabe nicht erkannt: '$moveStr'. Format: 'e2 e4' oder 'e7 e8 Q'")
               true
-            else
-              println(s"Ungültiger Zug: $moveStr")
-              true
-          case None =>
-            println(s"Eingabe nicht erkannt: '$moveStr'. Format: 'e2 e4'")
-            true
