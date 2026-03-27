@@ -36,12 +36,6 @@ class SwingGUI(controller: ControllerInterface) extends Frame with Observer:
   })
   clockTimer.start()
 
-  private val sideScroll = new ScrollPane(sidePanel):
-    horizontalScrollBarPolicy = ScrollPane.BarPolicy.Never
-    verticalScrollBarPolicy = ScrollPane.BarPolicy.AsNeeded
-    border = Swing.EmptyBorder(0, 0, 0, 0)
-    preferredSize = new Dimension(280, boardPanel.preferredSize.height - 250)
-
   // Right panel: lichess-style – black clock, nav+history, white clock, controls
   // Uses BorderPanel so history fills available space between clocks and controls
   private val clockAndHistoryPanel = new BorderPanel:
@@ -49,14 +43,13 @@ class SwingGUI(controller: ControllerInterface) extends Frame with Observer:
     layout(clockPanel.blackClock) = BorderPanel.Position.North
     layout(historyPanel) = BorderPanel.Position.Center
     layout(clockPanel.whiteClock) = BorderPanel.Position.South
-    preferredSize = new Dimension(280, 250)
-    maximumSize = new Dimension(Short.MaxValue, 250)
 
   private val rightPanel = new BoxPanel(Orientation.Vertical):
     background = new AwtColor(38, 36, 33)
-    preferredSize = new Dimension(280, boardPanel.preferredSize.height)
+    preferredSize = new Dimension(300, boardPanel.preferredSize.height)
+    maximumSize = new Dimension(300, Short.MaxValue)
     contents += clockAndHistoryPanel
-    contents += sideScroll
+    contents += sidePanel
 
   contents = new BorderPanel:
     background = new AwtColor(38, 36, 33)
