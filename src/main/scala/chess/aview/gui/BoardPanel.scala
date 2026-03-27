@@ -9,7 +9,7 @@ import java.awt.{Color as AwtColor, Font, Graphics2D, RenderingHints, BasicStrok
 import java.awt.geom.{Ellipse2D, RoundRectangle2D}
 
 /** Panel that renders the chess board and handles piece selection/movement via clicks. */
-class BoardPanel(controller: ControllerInterface, squareSize: Int = 72) extends Panel:
+class BoardPanel(controller: ControllerInterface, squareSize: Int = 80) extends Panel:
 
   private var selectedSquare: Option[Position] = None
   private var legalTargets: Set[Position] = Set.empty
@@ -176,10 +176,10 @@ class BoardPanel(controller: ControllerInterface, squareSize: Int = 72) extends 
     val game = controller.game
     val board = game.board
     val isGameOver = game.status match
-      case GameStatus.Checkmate | GameStatus.Stalemate | GameStatus.Resigned | GameStatus.Draw => true
+      case GameStatus.Checkmate | GameStatus.Stalemate | GameStatus.Resigned | GameStatus.Draw | GameStatus.TimeOut => true
       case _ => false
 
-    if isGameOver then return
+    if isGameOver || !controller.isAtLatest then return
 
     selectedSquare match
       case Some(from) if legalTargets.contains(pos) =>
