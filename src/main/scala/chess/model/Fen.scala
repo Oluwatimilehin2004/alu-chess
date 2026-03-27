@@ -4,22 +4,40 @@ package chess.model
   * Converts a FEN string to a Game and vice versa. */
 object Fen:
 
-  /** Parse a FEN string into a Game. Returns None on invalid input. */
-  def parse(fen: String): Option[Game] =
-    val parts = fen.trim.split("\\s+")
-    if parts.length < 4 then None
-    else
+  private val defaultColor = "w"
+  private val defaultCastling = "-"
+  private val defaultEnPassant = "-"
+  private val defaultHalfMoveClock = "0"
+
+  private def normalizeFenParts(parts: Array[String]): Either[ChessError, Array[String]] =
+    parts.length match
+      case 1 => Right(Array(parts(0), defaultColor, defaultCastling, defaultEnPassant, defaultHalfMoveClock))
+      case n if n >= 4 => Right(parts)
+      case _ => Left(ChessError.InvalidFenFormat("FEN requires either 1 field (board only) or at least 4 fields"))
+
+  /** Parse a FEN string into a Game. Returns Left with error detail on failure. */
+  def parseE(fen: String): Either[ChessError, Game] =
+    val rawParts = fen.trim.split("\\s+")
+    normalizeFenParts(rawParts).flatMap { parts =>
       for
-        board <- parseBoard(parts(0))
-        color <- parseColor(parts(1))
+        board <- parseBoardE(parts(0))
+        color <- parseColorE(parts(1))
       yield
         val castling = parts(2)
         val movedPieces = castlingToMovedPieces(castling)
         val enPassantStr = if parts.length > 3 then parts(3) else "-"
         val lastMove = parseEnPassant(enPassantStr)
         val halfMoveClock = if parts.length > 4 then parts(4).toIntOption.getOrElse(0) else 0
-        val status = GameStatus.Playing
-        Game(board, color, status, movedPieces, lastMove, halfMoveClock)
+        val initial = Game(board, color, GameStatus.Playing, movedPieces, lastMove, halfMoveClock)
+        computeInitialStatus(initial)
+      }
+
+  /** Parse a FEN string into a Game. Returns Failure with exception on invalid input. */
+  def parseT(fen: String): scala.util.Try[Game] =
+    parseE(fen).left.map(e => new Exception(e.message)).toTry
+
+  /** Parse a FEN string into a Game. Returns None on invalid input. */
+  def parse(fen: String): Option[Game] = parseE(fen).toOption
 
   /** Convert a Game to a FEN string. */
   def toFen(game: Game): String =
@@ -31,25 +49,49 @@ object Fen:
     val fullMove = 1 // simplified
     s"$boardStr $colorStr $castlingStr $epStr $halfMove $fullMove"
 
-  private def parseBoard(placement: String): Option[Board] =
-    val ranks = placement.split('/')
-    if ranks.length != 8 then None
-    else
-      val rows = ranks.reverse.map(parseRank)
-      if rows.exists(_.isEmpty) then None
-      else Some(Board(rows.map(_.get).toVector))
+  private def computeInitialStatus(game: Game): Game =
+    val color   = game.currentPlayer
+    val board   = game.board
+    val inCheck = MoveValidator.isInCheck(board, color)
+    val hasMoves = MoveValidator.legalMoves(board, color, game.movedPieces, game.lastMove).nonEmpty
+    val status =
+      if inCheck && !hasMoves then GameStatus.Checkmate
+      else if !inCheck && !hasMoves then GameStatus.Stalemate
+      else if MoveValidator.isInsufficientMaterial(board) then GameStatus.Draw
+      else if game.halfMoveClock >= 100 then GameStatus.Draw
+      else if inCheck then GameStatus.Check
+      else GameStatus.Playing
+    game.copy(status = status)
 
-  private def parseRank(rank: String): Option[Vector[Option[Piece]]] =
-    val result = rank.foldLeft(Option(Vector.empty[Option[Piece]])) {
-      case (None, _) => None
-      case (Some(acc), ch) if ch.isDigit =>
+  private def parseBoardE(placement: String): Either[ChessError, Board] =
+    val ranks = placement.split('/')
+    if ranks.length != 8 then Left(ChessError.InvalidFenFormat("Expected 8 ranks"))
+    else
+      val rows = ranks.reverse.map(parseRankE)
+      rows.find(_.isLeft) match
+        case Some(Left(err)) => Left(err)
+        case _ =>
+          val cells = rows.map(_.getOrElse(Vector.empty))
+          Right(Board(cells.toVector))
+
+  private def parseRankE(rank: String): Either[ChessError, Vector[Option[Piece]]] =
+    val result = rank.foldLeft[Either[ChessError, Vector[Option[Piece]]]](Right(Vector.empty)) {
+      case (Left(err), _) => Left(err)
+      case (Right(acc), ch) if ch.isDigit =>
         val n = ch.asDigit
-        if n < 1 || n > 8 then None
-        else Some(acc ++ Vector.fill(n)(None))
-      case (Some(acc), ch) =>
-        charToPiece(ch).map(p => acc :+ Some(p))
+        if n < 1 || n > 8 then Left(ChessError.InvalidFenBoardRow(rank))
+        else Right(acc ++ Vector.fill(n)(None))
+      case (Right(acc), ch) =>
+        charToPiece(ch) match
+          case Some(p) => Right(acc :+ Some(p))
+          case None    => Left(ChessError.InvalidFenPieceChar(ch))
     }
-    result.filter(_.length == 8)
+    result.filterOrElse(_.length == 8, ChessError.InvalidFenBoardRow(rank))
+
+  private def parseColorE(s: String): Either[ChessError, Color] = s match
+    case "w" => Right(Color.White)
+    case "b" => Right(Color.Black)
+    case _   => Left(ChessError.InvalidFenColor(s))
 
   private def charToPiece(c: Char): Option[Piece] = c match
     case 'K' => Some(Piece.King(Color.White))
@@ -79,11 +121,6 @@ object Fen:
     case Piece.Bishop(Color.Black) => 'b'
     case Piece.Knight(Color.Black) => 'n'
     case Piece.Pawn(Color.Black)   => 'p'
-
-  private def parseColor(s: String): Option[Color] = s match
-    case "w" => Some(Color.White)
-    case "b" => Some(Color.Black)
-    case _   => None
 
   private def castlingToMovedPieces(castling: String): Set[Position] =
     var moved = Set.empty[Position]

@@ -147,3 +147,85 @@ class FenSpec extends AnyWordSpec with Matchers:
       result should include("Kq")
     }
   }
+
+  "Fen.parseE" should {
+
+    "accept board-only FEN and apply defaults" in {
+      val fen = "8/8/8/2k5/4K3/8/8/8"
+      val result = Fen.parseE(fen)
+      result shouldBe a[Right[?, ?]]
+      result.map(_.currentPlayer) shouldBe Right(Color.White)
+      result.map(_.status) shouldBe Right(GameStatus.Draw)
+      result.map(_.board.cell(Position(4, 2))) shouldBe Right(Some(Piece.King(Color.Black)))
+      result.map(_.board.cell(Position(3, 4))) shouldBe Right(Some(Piece.King(Color.White)))
+    }
+
+    "return Right for valid FEN starting position" in {
+      val fen = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
+      val result = Fen.parseE(fen)
+      result shouldBe a[Right[?, ?]]
+      result.map(_.board) shouldBe Right(Board.initial)
+      result.map(_.currentPlayer) shouldBe Right(Color.White)
+    }
+
+    "return Right for black to move" in {
+      val fen = "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq e3 0 1"
+      Fen.parseE(fen).map(_.currentPlayer) shouldBe Right(Color.Black)
+    }
+
+    "return Left(InvalidFenFormat) for invalid board-only FEN" in {
+      Fen.parseE("rnbqkbnr/pppppppp/8/8") shouldBe Left(ChessError.InvalidFenFormat("Expected 8 ranks"))
+    }
+
+    "return Left(InvalidFenFormat) for wrong rank count" in {
+      val result = Fen.parseE("rnbqkbnr/pppppppp/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1")
+      result shouldBe Left(ChessError.InvalidFenFormat("Expected 8 ranks"))
+    }
+
+    "return Left(InvalidFenPieceChar) for invalid piece character" in {
+      val result = Fen.parseE("xnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1")
+      result shouldBe Left(ChessError.InvalidFenPieceChar('x'))
+    }
+
+    "return Left(InvalidFenBoardRow) for rank too long" in {
+      val result = Fen.parseE("rnbqkbnrr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1")
+      result shouldBe a[Left[?, ?]]
+      result.left.map(_.isInstanceOf[ChessError.InvalidFenBoardRow]) shouldBe Left(true)
+    }
+
+    "return Left(InvalidFenColor) for invalid active color" in {
+      val result = Fen.parseE("8/8/8/8/8/8/8/8 x - - 0 1")
+      result shouldBe Left(ChessError.InvalidFenColor("x"))
+    }
+
+    "be consistent with parse (property)" in {
+      val fens = Seq(
+        "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+        "8/8/8/8/8/8/8/8 w - - 0 1",
+        "rnbqkbnr/pppppppp/8/8",
+        "xnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+        "8/8/8/8/8/8/8/8 x - - 0 1"
+      )
+      for fen <- fens do
+        Fen.parse(fen) shouldBe Fen.parseE(fen).toOption
+    }
+  }
+
+  "Fen.parseT" should {
+
+    "return Success for valid FEN" in {
+      val fen = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
+      Fen.parseT(fen).isSuccess shouldBe true
+      Fen.parseT(fen).get.board shouldBe Board.initial
+    }
+
+    "return Failure for invalid FEN - too few fields" in {
+      Fen.parseT("rnbqkbnr/pppppppp/8/8").isFailure shouldBe true
+    }
+
+    "return Failure for invalid piece character" in {
+      val result = Fen.parseT("xnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1")
+      result.isFailure shouldBe true
+      result.failed.get.getMessage should not be empty
+    }
+  }
