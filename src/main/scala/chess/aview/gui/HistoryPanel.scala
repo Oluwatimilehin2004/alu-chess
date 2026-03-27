@@ -140,12 +140,7 @@ class HistoryPanel(controller: ControllerInterface) extends BoxPanel(Orientation
       )
 
   private def getFullHistory(): Vector[MoveEntry] =
-    val lastIdx = controller.gameStatesCount - 1
-    val currentBrowse = controller.browseIndex
-    controller.browseToMove(lastIdx)
-    val history = controller.game.moveHistory
-    controller.browseToMove(currentBrowse)
-    history
+    controller.latestMoveHistory
 
   private def moveCell(san: String, stateIndex: Int, currentBrowse: Int, rowBg: AwtColor): Label =
     val isActive = stateIndex == currentBrowse

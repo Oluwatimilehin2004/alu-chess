@@ -25,6 +25,7 @@ trait ControllerInterface:
   def isAtLatest: Boolean
   def browseIndex: Int
   def gameStatesCount: Int
+  def latestMoveHistory: Vector[MoveEntry]
   // Clock
   def clock: Option[ChessClock]
   def tickClock(): Unit

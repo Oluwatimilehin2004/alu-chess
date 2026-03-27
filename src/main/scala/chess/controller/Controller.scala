@@ -131,6 +131,7 @@ class Controller extends ControllerInterface with Observable:
   override def isAtLatest: Boolean = _browseIdx == _gameStates.size - 1
   override def browseIndex: Int = _browseIdx
   override def gameStatesCount: Int = _gameStates.size
+  override def latestMoveHistory: Vector[MoveEntry] = _gameStates.last.moveHistory
 
   // --- Clock ---
 
