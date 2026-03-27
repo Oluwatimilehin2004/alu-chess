@@ -296,6 +296,18 @@ class GameSpec extends AnyWordSpec with Matchers {
       result shouldBe defined
       result.get.board.cell(Position(7, 1)) shouldBe Some(Piece.Rook(Color.White))
     }
+
+    "promote pawn to bishop" in {
+      val board = Board.empty
+        .put(Position(6, 0), Piece.Pawn(Color.White))
+        .put(Position(0, 4), Piece.King(Color.White))
+        .put(Position(7, 4), Piece.King(Color.Black))
+      val game = Game(board, Color.White, GameStatus.Playing)
+      val move = Move(Position(6, 0), Position(7, 0), Some('B'))
+      val result = game.applyMove(move)
+      result shouldBe defined
+      result.get.board.cell(Position(7, 0)) shouldBe Some(Piece.Bishop(Color.White))
+    }
   }
 
   // ---------- Draw ----------

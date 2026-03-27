@@ -45,12 +45,73 @@ class ControllerSpec extends AnyWordSpec with Matchers {
     }
   }
 
+  "remove observer" should {
+    "not notify removed observers" in {
+      val controller = Controller()
+      var count = 0
+      val observer = new Observer:
+        override def update(): Unit = count += 1
+      controller.add(observer)
+      controller.newGame()
+      val countAfterAdd = count
+      controller.remove(observer)
+      controller.newGame()
+      count shouldBe countAfterAdd // no additional notification after removal
+    }
+  }
+
   "statusText" should {
 
-    "show Checkmate text" in {
+    "show Check text when in check" in {
       val controller = Controller()
-      // Use a sequence of moves that leads to a state, or verify the basic status
-      controller.statusText should include("am Zug")
+      // White rook at a8, black king at e8: black is in check
+      controller.loadFen("R3k3/8/8/8/8/8/8/4K3 b - - 0 1")
+      controller.game.status shouldBe GameStatus.Check
+      controller.statusText should include("Schach")
+    }
+
+    "show Checkmate text after checkmate" in {
+      val controller = Controller()
+      // Fool's Mate
+      controller.doMove(Move(Position(1,5), Position(2,5)))
+      controller.doMove(Move(Position(6,4), Position(4,4)))
+      controller.doMove(Move(Position(1,6), Position(3,6)))
+      controller.doMove(Move(Position(7,3), Position(3,7)))
+      controller.game.status shouldBe GameStatus.Checkmate
+      controller.statusText should include("Schachmatt")
+    }
+
+    "show Stalemate text when in stalemate" in {
+      val controller = Controller()
+      // Black king at h8, white king at f7, white queen at g6 -> stalemate
+      controller.loadFen("7k/5K2/6Q1/8/8/8/8/8 b - - 0 1")
+      controller.game.status shouldBe GameStatus.Stalemate
+      controller.statusText should include("Patt")
+    }
+
+    "show Draw text when insufficient material" in {
+      val controller = Controller()
+      // K vs K -> draw by insufficient material
+      controller.loadFen("8/8/4k3/8/8/4K3/8/8 w - - 0 1")
+      controller.game.status shouldBe GameStatus.Draw
+      controller.statusText should include("Remis")
+    }
+
+    "show Resigned text after resign" in {
+      val controller = Controller()
+      controller.resign()
+      controller.game.status shouldBe GameStatus.Resigned
+      controller.statusText should include("Aufgegeben")
+    }
+
+    "notify observers on resign" in {
+      val controller = Controller()
+      var notified = false
+      val observer = new Observer:
+        override def update(): Unit = notified = true
+      controller.add(observer)
+      controller.resign()
+      notified shouldBe true
     }
   }
 
