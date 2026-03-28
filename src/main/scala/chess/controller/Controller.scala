@@ -82,8 +82,16 @@ class Controller extends ControllerInterface with Observable:
         Right(_game)
       case Left(err) => Left(err)
 
+  // $COVERAGE-OFF$ sys.exit cannot be invoked in a unit test
   override def quit(): Unit =
     sys.exit(0)
+  // $COVERAGE-ON$
+
+  override def resign(): Unit =
+    _game = latestGame.resign
+    _gameStates = _gameStates.init :+ _game
+    _browseIdx = _gameStates.size - 1
+    notifyObservers()
 
   override def boardToString: String =
     game.board.toString
