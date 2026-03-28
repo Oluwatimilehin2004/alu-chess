@@ -157,3 +157,7 @@ Detaillierte ADRs: [`docs/architecture-decisions.md`](docs/architecture-decision
 ## Lizenz
 
 Kursprojekt – keine öffentliche Lizenz.
+
+---
+## 📦 Imported from [https://github.com/luiszink/alu-chess](https://github.com/luiszink/alu-chess)
+*Imported using ForkYouToo - Learn, Adapt, Build*
