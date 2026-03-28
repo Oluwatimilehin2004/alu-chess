@@ -318,16 +318,9 @@ class PgnSpec extends AnyWordSpec with Matchers {
         .put(Position(0, 4), Piece.King(Color.White))
         .put(Position(7, 4), Piece.King(Color.Black))
       val g = Game(board, Color.White, GameStatus.Playing)
-      // "dx5" → str = "d5" (length 2), originalStr = "dx5" contains "x", first char 'd' is letter
-      // fileHint = Some('d' - 'a') = Some(3), destStr = "5" which is... hmm let me check
-      // Actually str = "d5", takeRight(2) = "d5", Position.fromString("d5") = Position(4, 3)
-      // candidates: pawn on d4 that can go to e5... no, d5 = Position(4,3)
-      // Wait, pawn on d4 (3,3) can move to d5 (4,3) - a forward move, not a capture!
-      // Let me use a different setup where there's an actual capture target
+      // Non-standard SAN with embedded 'x' where str.length == 2 after removal,
+      // testing the file-hint-from-originalStr branch in parsePawnMove
       val move = Pgn.parseSAN("dx5", g)
-      // This might not find a valid move since the position parsing might fail
-      // "d5" → Position.fromString("d5") → d5 is Position(4,3) → pawn on d4 can go to d5 (forward move)
-      // But the "x" suggests capture. The code still finds the candidate and returns it
       move shouldBe defined
     }
 

@@ -161,12 +161,8 @@ class MoveEntrySpec extends AnyWordSpec with Matchers {
       entry.san shouldBe "R1a4"
     }
 
-    "disambiguate by full square when both file and rank are same" in {
-      // Two knights on same file b1 and b3, plus one on f3 -> target d2
-      // b1(0,1) and b3(2,1) share file, b1(0,1) row 0 is unique among others
-      // Actually b3(2,1) row 2 same as f3(2,5) so row IS ambiguous for b3
-      // For b1: others are b3 (same file b) and f3 (different file f) -> file not unique
-      //         others are b3 (row 2) and f3 (row 2) -> row IS unique (0 vs 2,2)
+    "disambiguate by rank when file is shared" in {
+      // Three knights (b1, b3, f3) all reaching d2; b1's row 0 is unique
       val board = boardWith(
         Position(0, 1) -> Piece.Knight(Color.White), // b1
         Position(2, 1) -> Piece.Knight(Color.White), // b3
@@ -275,18 +271,14 @@ class MoveEntrySpec extends AnyWordSpec with Matchers {
 
   "MoveEntry full square disambiguation" should {
     "use full square when neither file nor rank is unique" in {
-      // Need 3+ pieces of same type where the moving piece shares both file AND rank
-      // with different other pieces. E.g., queens on a1, a5, e1 -> target c3
+      // Queens on a1, a5, e1 all reach c3; a1 shares file with a5 and row with e1
       val board = boardWith(
         Position(0, 0) -> Piece.Queen(Color.White), // a1
         Position(4, 0) -> Piece.Queen(Color.White), // a5
-        Position(0, 4) -> Piece.Queen(Color.White), // e1 (also acts as "king" area)
+        Position(0, 4) -> Piece.Queen(Color.White), // e1
         Position(3, 7) -> Piece.King(Color.White),
         Position(7, 4) -> Piece.King(Color.Black)
       )
-      // Target c3 (2,2): from a1(0,0): dr=2,dc=2 diagonal ok.
-      //   from a5(4,0): dr=2,dc=2 diagonal ok. from e1(0,4): dr=2,dc=2 diagonal ok.
-      // a1 shares file 'a' with a5, and row 1 with e1 -> full square needed
       val move = Move(Position(0, 0), Position(2, 2))
       val entry = MoveEntry.create(
         move, Piece.Queen(Color.White), None, board, GameStatus.Playing, Set.empty, None

@@ -504,9 +504,8 @@ class ControllerSpec extends AnyWordSpec with Matchers {
 
     "trigger timeout when clock expires" in {
       val controller = Controller()
-      // Use reflection to set a clock with very little time
       controller.newGameWithClock(Some(TimeControl.Blitz5_0))
-      // Replace the clock with one that has already expired
+      // Use reflection to inject an already-expired clock
       val expiredClock = ChessClock(0L, 300_000L, 0L, Some(Color.White), System.nanoTime())
       val field = controller.getClass.getDeclaredField("_clock")
       field.setAccessible(true)
@@ -527,7 +526,7 @@ class ControllerSpec extends AnyWordSpec with Matchers {
     "include 'Zeit abgelaufen'" in {
       val controller = Controller()
       controller.newGameWithClock(Some(TimeControl.Blitz5_0))
-      // Force a timeout via clock
+      // Use reflection to inject an already-expired clock
       val expiredClock = ChessClock(0L, 300_000L, 0L, Some(Color.White), System.nanoTime())
       val field = controller.getClass.getDeclaredField("_clock")
       field.setAccessible(true)
