@@ -420,6 +420,10 @@ class SidePanel(controller: ControllerInterface, onNewGame: () => Unit, onQuit: 
   private def toggleToolsDialog(): Unit =
     toolsDialog.setVisible(!toolsDialog.isVisible)
 
+  /** Public entry point so the NavBar's tools icon can open the dialog. */
+  def openToolsDialog(): Unit =
+    toolsDialog.setVisible(true)
+
   // --- Action row: compact buttons (Neues Spiel | Beenden | Werkzeuge) ---
   private val actionRow = new Panel:
     background = new AwtColor(38, 36, 33)
