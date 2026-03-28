@@ -120,7 +120,7 @@ class StartPanel(controller: ControllerInterface, onStart: Option[TimeControl] =
     TcEntry("10+5",  "Schnell",      new AwtColor(100, 170, 220), Some(TimeControl.Rapid10_5)),
     TcEntry("15+10", "Schnell",      new AwtColor(100, 170, 220), Some(TimeControl.Rapid15_10)),
     TcEntry("30+0",  "Klassisch",    new AwtColor(160, 140, 200), Some(TimeControl.Classical30_0)),
-    TcEntry("30+20", "Klassisch",    new AwtColor(160, 140, 200), None), // placeholder – no preset yet
+    TcEntry("30+20", "Klassisch",    new AwtColor(160, 140, 200), Some(TimeControl.Classical30_20)),
     TcEntry("Ohne Uhr", "Freies Spiel", subtitleFg,               None),
   )
 

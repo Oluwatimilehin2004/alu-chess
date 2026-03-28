@@ -13,12 +13,13 @@ object TimeControl:
   val Rapid10_0    = TimeControl(600_000L, 0L, "10+0 Rapid")
   val Rapid10_5    = TimeControl(600_000L, 5_000L, "10+5 Rapid")
   val Rapid15_10   = TimeControl(900_000L, 10_000L, "15+10 Rapid")
-  val Classical30_0 = TimeControl(1_800_000L, 0L, "30+0 Classical")
+  val Classical30_0  = TimeControl(1_800_000L, 0L, "30+0 Classical")
+  val Classical30_20 = TimeControl(1_800_000L, 20_000L, "30+20 Classical")
 
   val presets: Vector[TimeControl] = Vector(
     Bullet1_0, Bullet2_1, Blitz3_0, Blitz3_2,
     Blitz5_0, Blitz5_3, Rapid10_0, Rapid10_5,
-    Rapid15_10, Classical30_0
+    Rapid15_10, Classical30_0, Classical30_20
   )
 
 /** Immutable chess clock. Tracks remaining time for both players.
